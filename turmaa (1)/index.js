@@ -3,13 +3,21 @@ const port = 3000;
 var express = require('express');
 const router = express.Router();
 var mysql = require('mysql2');
-var cors = require('cors');
+const bodyParser = require("body-parser");
+const cors = require('cors');
+
+const corsOptions = {
+    origin: 'http://localhost:3000', 
+    methods: ['GET', 'POST', 'PUT', 'DELETE'], 
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  };
 
 var app = express();
+app.use(bodyParser.raw({ type: "audio/*", limit: "10mb" }));
 app.use(express.json());
 app.use(express.static('./pages'));
 app.use(router);
-app.use(cors);
+app.use(cors(corsOptions));
 
 
 const musicas = [];
@@ -46,16 +54,16 @@ router.get("/api/usuarios", (req, res) => {
     var sql = 'SELECT id, email, senha FROM usuario';
     con.query(sql, function (err, result) {
         if (err) throw err;
-        response.status(200).json(result);
+        res.status(200).json(result);
     });    
 });
 
-router.post("api/login", (req, res) => {
+router.post("/api/login", (req, res) => {
     const usuario = req.body;
     const email = usuario.email;
     const senha = usuario.senha;
 
-    const sql = `SELECT ID FROM USUARIO WHERE EMAIL = '${email}' AND SENHA = '${senha}'`;
+    const sql = `SELECT ID, EMAIL FROM USUARIO WHERE EMAIL = '${email}' AND SENHA = '${senha}'`;
 
     con.query(sql, function (err, result) {
         if (err) throw err;
@@ -63,6 +71,29 @@ router.post("api/login", (req, res) => {
         console.log(result);
         res.status(200).json(result);
     }); 
+});
+
+//endpoint para capturar um usuário por id
+router.get('/api/usuarios/:id', (req, res) => {
+    const id = req.param("id");
+
+    let sql = `SELECT u.id, u.email, u.senha FROM usuario u WHERE u.id = ${id}`;
+    con.query(sql, function (err, result) {
+        if (err) throw err;
+        res.status(200).json(result[0]);
+    });
+});
+
+//endpoint para excluir um usuário
+router.delete('/api/usuarios/:id', (req, res) => {
+    const id = req.param("id");
+
+    var sql = `DELETE FROM usuario WHERE id = ${id} `;
+    con.query(sql, function (err, result) {
+        if (err) throw err;
+    });
+
+    res.status(200).send(`usuario com id ${id} excluído`);
 });
 
 router.get("/musicas", (req,res) => {
@@ -75,17 +106,25 @@ router.get("/musicas", (req,res) => {
 });
 
 router.post("/musicas", (req, res) => {
-    const q = "INSERT INTO musicas (`NOME`, `ARTISTA`, `IMG_COVER`, `AUDIO`) VALUES (?)"
     const values = [
         req.body.NOME,
         req.body.ARTISTA,
         req.body.IMG_COVER,
-        req.body.AUDIO];
+        req.headers["content-type"], // Tipo do arquivo no header
+        req.body.AUDIO]; // O arquivo binário];
 
-    con.query(q, [values], (err,data) => {
-        if(err) return res.json(err);
-        return res.json("musica criada");
-    })
+    if (!req.headers || !req.body) {
+        return res.status(400).json({ error: "Áudio inválido" });
+    }
+
+    const q = "INSERT INTO musicas (`NOME`, `ARTISTA`, `IMG_COVER`, `AUDIOTYPE`, `AUDIO`) VALUES (?)";
+    con.query(q, [values], (err, result) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: "Erro ao salvar o áudio" });
+        }
+        res.status(201).json({ message: "Áudio salvo com sucesso!", id: result.insertId });
+    });
 });
 
 app.get('/hello', (req, res) => {
