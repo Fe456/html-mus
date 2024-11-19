@@ -17,7 +17,7 @@
             const albumImg = document.getElementById('albumImg').value;
             const songFile = document.getElementById('songFile').value;
 
-            if (!nome || !artista || !duracao || !songFile) {
+            if (!nome || !artista || !albumImg || !songFile) {
                 document.getElementById('campoObrigatorio').style.display = 'block';
                 return;
             } else {
@@ -40,14 +40,15 @@
                 "DURATION":songFile.duration
             };
 
-            const response = await fetch(`http://localhost:3000/musicas`, {
+            const res = await fetch(`http://localhost:3000/musicas`, {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json",
+                    "Content-Type": "multipart/form-data",
                 },
                 body: JSON.stringify(data),
             });            
-            const result = await response.json();
+            const result = await res.json();
+            console.log(res);
         }
     </script>
 </head>
