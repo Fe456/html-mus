@@ -1,0 +1,32 @@
+.error-label {
+    color:red;
+    display: none;
+}
+
+.container {
+    width: 40%; 
+    margin-top: 120px; 
+    background-color: rgba(43,48,53,255);
+    border-radius: 10px;
+    height: 360px;
+}
+
+h2 {
+    color:white;
+}
+
+.mb-3 {
+    color: white;
+}
+
+.form-control {
+    background-color: rgba(43,48,53,255); 
+    color: white; 
+    border-color: rgb(39, 38, 38);
+}
+
+.divider{
+    width:10px;
+    height:auto;
+    display:inline-block;
+}
