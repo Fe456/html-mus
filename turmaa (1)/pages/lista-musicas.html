@@ -35,11 +35,12 @@
                 var cell6 = row.insertCell(5);
                 var cell7 = row.insertCell(6);
 
+                const imgCover = buffer.Buffer.from(musica.IMG_COVER);
+
                 cell1.innerHTML = musica.ID;
                 cell2.innerHTML = musica.NOME;
                 cell3.innerHTML = musica.ARTISTA;
-                cell4.innerHTML = musica.IMG_COVER;
-                cell5.innerHTML = musica.AUDIO;
+                cell4.innerHTML = '<img src="data:image/*;base64,imgCover">';
                 cell6.innerHTML = '<button class="btn btn-primary">Editar</editar>';
                 cell7.innerHTML = '<button class="btn btn-danger">Excluir</editar>';
               });
