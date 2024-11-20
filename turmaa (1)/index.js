@@ -5,22 +5,17 @@ const router = express.Router();
 var mysql = require('mysql2');
 const bodyParser = require("body-parser");
 const cors = require('cors');
-
-const corsOptions = {
-    origin: 'http://localhost:3000', 
-    methods: ['GET', 'POST', 'PUT', 'DELETE'], 
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  };
+const multer = require('multer');
 
 var app = express();
 app.use(bodyParser.raw({ type: "audio/*", limit: "10mb" }));
 app.use(express.json());
 app.use(express.static('./pages'));
 app.use(router);
-app.use(cors(corsOptions));
 
 
-const musicas = [];
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 var con = mysql.createConnection({
     host: "127.0.0.1",
@@ -105,25 +100,31 @@ router.get("/musicas", (req,res) => {
     })
 });
 
-router.post("/musicas", (req, res) => {
-    const values = [
-        req.body.NOME,
-        req.body.ARTISTA,
-        req.body.IMG_COVER,
-        req.headers["content-type"], // Tipo do arquivo no header
-        req.body.AUDIO]; // O arquivo binário];
+router.post("/musicas", upload.fields([{ name: 'IMG_COVER' }, { name: 'AUDIO' }]), (req, res) => {
+    const nome = req.body.NOME;
+    const artista = req.body.ARTISTA;
+    const imgCover = req.files['IMG_COVER'][0];
+    const audio = req.files['AUDIO'][0];
 
-    if (!req.headers || !req.body) {
-        return res.status(400).json({ error: "Áudio inválido" });
+    if (!nome || !artista || !imgCover || !audio) {
+        return res.status(400).json({ error: "Todos os campos são obrigatórios" });
     }
+
+    const values = [
+        nome,
+        artista,
+        imgCover.buffer,
+        audio.mimetype,
+        audio.buffer
+    ];
 
     const q = "INSERT INTO musicas (`NOME`, `ARTISTA`, `IMG_COVER`, `AUDIOTYPE`, `AUDIO`) VALUES (?)";
     con.query(q, [values], (err, result) => {
         if (err) {
             console.error(err);
-            return res.status(500).json({ error: "Erro ao salvar o áudio" });
+            return res.status(500).json({ error: "Erro ao salvar a música" });
         }
-        res.status(201).json({ message: "Áudio salvo com sucesso!", id: result.insertId });
+        res.status(201).json({ message: "Música salva com sucesso!", id: result.insertId });
     });
 });
 
