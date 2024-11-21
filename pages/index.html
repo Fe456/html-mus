@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <link href="dash.css" rel="stylesheet" />
+    <script>
+      var id = localStorage.getItem('id');
+      if (!id) {
+        alert('Você precisa se autenticar na aplicação!');
+        location.href = 'login.html';
+        }
+    </script>
+    <script>
+      const carregar = (id) => {
+                  console.log("entrou na função carregar")
+                  console.log(id);
+                  location.href = 'cadastrar-mus.html?id='+id;
+              }
+
+      const deleteSong = async(id) => {
+                  if(!window.confirm("Deseja excluir?")) {return;} else {
+                  console.log("chamou o excluir");
+                  console.log(id);
+                  const response = await fetch(`http://localhost:3000/musicas/${id}`, {
+                      method: "DELETE",
+                      headers: {
+                          "Content-Type": "application/json",
+                      }
+                  });
+                  const result = await response.body;
+                  console.log(result);
+                  if (response.ok) {
+                  alert("Música deletada com sucesso!");
+                  window.location.href="index.html";
+                  } else {
+                  const error = await response.json();
+                  alert(`Erro: ${error.message}`);
+            }
+              }
+            }
+    </script>
+
+  </head>
+  <body style="background-color: #272626;">
+    <nav class="navbar navbar-expand-lg bg-body-tertiary" data-bs-theme="dark">
+        <div class="container-fluid">
+          <a class="navbar-brand" href="#">
+            <img src="./media/logo.png" alt="Logo" width="50" height="35">
+          </a>
+          <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+              <li class="nav-item">
+                <a class="nav-link active" aria-current="page" href="#"><i class="material-symbols-outlined">home</i></a>
+              </li>
+              <li class="nav-item" id="login">
+                <a class="nav-link" href="login.html"><i class="material-symbols-outlined">login</i></a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+
+      <div class="container" style="width: 100%; overflow:scroll; overflow-x: hidden; overflow-y: auto;">
+      <div class="row">
+        <div class="col-8">
+        </div>
+        <table id="tabelaMusicas" class="table table-striped table-hover table-dark">
+          <thead>
+            <tr>
+              <th scope="col">ID</th>
+              <th scope="col">Nome</th>
+              <th scope="col">Artista</th>
+              <th scope="col">Capa</th>
+              <th scope="col"></th>
+              <th scope="col"></th>
+              <th scope="col"></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <button class="btn btn-secondary" onclick="location.href= 'cadastrar-mus.html'" style="padding: 0">Adicionar música</button>
+      </div>
+      </div>
+
+    <nav class="audio navbar navbar-expand-lg bg-body-tertiary" data-bs-theme="dark">
+        <audio controls id="song">
+          <source type="audio/mpeg" id="audio-1">
+        </audio>
+        <div class="songInfo-small">
+          <img src="./media/thumbnail.jpg" class="songImg-small"></img>
+          <div class="info">
+            <i class="music-icon material-symbols-outlined" id="titleI">album</i>
+            <i class="music-icon material-symbols-outlined" id="artistI">artist</i>
+            <p class="songInfo-txt-small" id="title"></p>
+            <p class="songInfo-txt-small" id="artist"></p>
+          </div>
+        </div>
+        <div class="controls">
+          <div><i class="prev material-symbols-outlined" onclick="prevSong()">skip_previous</i></div>
+          <div><p id="ctrlIco" onclick="playPause()" class="play material-symbols-outlined">play_arrow</p></div>
+          <div><i class="next material-symbols-outlined" onclick="nextSong()">skip_next</i></div>
+        </div>
+        <input type="range" value="0" class="slider" id="progress"></input>
+        <i class="material-symbols-outlined" id="volumeIco" onclick="muteVol()">volume_up</i>
+        <input type="range" value=".75" min="0" max="1.0" step="0.01" class="slider" id="volumeBar"></input>
+    </nav>
+
+      <script>
+        var volumeBar = document.getElementById("volumeBar");
+        let volumeIco = document.getElementById("volumeIco");
+        let progress = document.getElementById("progress");
+        var song = document.getElementById("song");
+        var ctrlIco = document.getElementById("ctrlIco");
+        var isPlaying = false;
+        var isPressed = false;
+        var currentSongID = null;  // Track the currently playing song ID
+        let songs = [];
+
+        // Event listener to set progress and volume when metadata is loaded
+        song.onloadedmetadata = function() {
+          console.log("Metadata loaded. Song duration:", song.duration);
+            // Ensure duration is available
+            if (song.duration) {
+                progress.max = song.duration;
+                progress.value = song.currentTime; // Initialize progress bar
+            }
+            volumeBar.value = song.volume; // Set initial volume
+        }
+        
+
+        // Event listener for when the audio is playing to update the progress bar
+        song.ontimeupdate = function() {
+            if (!isPressed) { // Only update if the progress bar isn't being dragged
+              console.log("song currentTime: ", song.currentTime);
+              console.log("progress value: ", progress.value);
+              if (progress.value !== song.currentTime) {
+                progress.value = song.currentTime; // Only update if they differ
+              }
+              console.log("song currentTime: ", song.currentTime);
+              console.log("progress value: ", progress.value);
+            }
+        }
+
+        // Event listener for progress bar drag
+        progress.oninput = function() {
+            isPressed = true; // Set the flag to true when the user is dragging the progress bar
+            song.currentTime = progress.value; // Sync progress bar with current time
+            console.log("Progress input: ", progress.value);
+        };
+
+        // When the user releases the progress bar
+        progress.onchange = function() {
+            isPressed = false; // Reset flag when the user stops dragging
+        };
+
+        const playPause = () => {
+          if(isPlaying) {
+            song.pause();
+            ctrlIco.innerHTML = "play_arrow";
+            isPlaying = false;
+          } else {
+            song.play().catch(err => {
+              console.error("Error playing audio: ", err);
+              alert("Autoplay is blocked. Please click to play.");
+            });
+            ctrlIco.innerHTML = "pause";
+            isPlaying = true;
+          }
+        };
+
+        // Event listener for volume control
+        volumeBar.oninput = function() {
+            song.volume = volumeBar.value;
+            volumeIco.innerHTML = song.volume === 0 ? "volume_off" : "volume_up";
+        }
+
+        const muteVol = () => {
+          if(isPressed) {
+            song.volume = volumeBar.value;
+            volumeIco.innerHTML = "volume_up";
+            isPressed = false;
+          } else {
+            song.volume = 0.0;
+            volumeIco.innerHTML = "volume_off";
+            isPressed = true;
+          }
+        }
+
+        const nextSong = () => {
+          const currentIndex = songs.findIndex(song => song.ID === currentSongID);
+          if (currentIndex >= 0 && currentIndex < songs.length - 1) {
+              const nextSong = songs[currentIndex + 1];
+              carregarMus(nextSong);  // Load and play the next song
+          } else {
+              console.log("No next song.");
+          }
+      };
+
+      const prevSong = () => {
+          const currentIndex = songs.findIndex(song => song.ID === currentSongID);
+          if (currentIndex > 0) {
+              const prevSong = songs[currentIndex - 1];
+              carregarMus(prevSong);  // Load and play the previous song
+          } else {
+              console.log("No previous song.");
+          }
+      };
+
+        const carregarMus = (musica) => {
+          console.log(`Current song ID: ${currentSongID}, clicked song ID: ${musica.ID}`);
+
+          if (currentSongID === musica.ID) {
+              // If the same song is clicked, just toggle play/pause
+              console.log("Same song clicked, toggling play/pause.");
+              playPause();
+              return;
+          }
+
+          // Get the new audio file URL
+          var link = `http://localhost:3000/musicas/audio/${musica.ID}`;
+          console.log(`Changing song source to: ${link}`);
+
+          if (song.src !== link) {
+              // Only update src if it's a new song
+              console.log(`Updating song src to: ${link}`);
+              song.src = link;
+              progress.value = 0;  // Reset progress bar to start
+              song.play();  // Start playing the new song
+          }
+
+          // Update song info (title, artist)
+          document.getElementById("title").innerHTML = musica.NOME;
+          document.getElementById("artist").innerHTML = musica.ARTISTA;
+          document.getElementById("ctrlIco").innerHTML = "pause";  // Change to pause icon
+
+          // Update the album cover
+          document.getElementsByClassName("songImg-small")[0].src = `http://localhost:3000/musicas/image/${musica.ID}}`;
+
+          // Track the current song ID
+          currentSongID = musica.ID;
+      };
+
+        const listar = async () => {
+          console.log("chamou a função listar");
+
+          const response = await fetch(`http://localhost:3000/musicas`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
+          songs = await response.json();
+          const tabelaMusicas = document.getElementById("tabelaMusicas");
+
+          songs.map((musica, indice) => {
+            var row = tabelaMusicas.insertRow(indice + 1);
+            var cell1 = row.insertCell(0);
+            var cell2 = row.insertCell(1);
+            var cell3 = row.insertCell(2);
+            var cell4 = row.insertCell(3);
+            var cell5 = row.insertCell(4);
+            var cell6 = row.insertCell(5);
+            var cell7 = row.insertCell(6);
+
+            cell1.innerHTML = musica.ID;
+            cell2.innerHTML = musica.NOME;
+            cell3.innerHTML = musica.ARTISTA;
+            cell4.innerHTML = `<img src="http://localhost:3000/musicas/image/${musica.ID}}" alt="Capa" style="max-width: 50px;">`;
+            cell5.innerHTML = '<button class="btnMus btn btn-primary">▶</editar>';
+            cell6.innerHTML = '<button onclick="carregar('+musica.ID+')" class="btn btn-primary">Editar</editar>';
+            cell7.innerHTML = '<button onclick="deleteSong('+musica.ID+')" class="btn btn-danger">Excluir</editar>';
+
+            const btnMus = cell5;
+            btnMus.addEventListener('click', function() {carregarMus(musica)});
+
+        });
+    };
+    listar();
+    
+      </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>
